@@ -8,9 +8,15 @@ import numpy as np
 import chess
 import gymnasium as gym
 from gymnasium import spaces
-import pufferlib
-import pufferlib.utils
-import pufferlib.vector
+
+try:
+    import pufferlib
+    import pufferlib.utils
+    import pufferlib.vector
+    PUFFER_AVAILABLE = True
+except ModuleNotFoundError:
+    from gymnasium.vector import AsyncVectorEnv
+    PUFFER_AVAILABLE = False
 
 from typing import Dict, Optional, Tuple, Any
 import time
@@ -356,11 +362,14 @@ class DrGRPOTrainer:
         
         # Create environments
         print(f"Creating {num_envs} environments...")
-        self.vec_env = pufferlib.vector.make(
-            env_creator,
-            num_envs=num_envs,
-            backend=pufferlib.vector.Multiprocessing  # or Serial for debugging
-        )
+        if PUFFER_AVAILABLE:
+            self.vec_env = pufferlib.vector.make(
+                env_creator,
+                num_envs=num_envs,
+                backend=pufferlib.vector.Multiprocessing
+            )
+        else:
+            self.vec_env = AsyncVectorEnv([env_creator for _ in range(num_envs)])
         
         # Get env specs from a single env
         single_env = env_creator()
